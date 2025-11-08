@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система техобслуживания</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+        }
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .nav {
+            background: #34495e;
+            padding: 10px;
+            text-align: center;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 10px;
+            display: inline-block;
+        }
+        .nav a:hover {
+            background: #1abc9c;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+        }
+        .warning {
+            background: #fff5f5;
+            border-left: 4px solid #e74c3c;
+        }
+        .page {
+            display: none;
+        }
+        .active {
+            display: block;
+        }
+        .loading {
+            color: #666;
+            text-align: center;
+            padding: 20px;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Система управления техобслуживанием</h1>
+        <p>Бекенд + Фронтенд с реальными запросами к БД</p>
+    </div>
+    
+    <div class="nav">
+        <a href="#" onclick="showPage('home')">Главная</a>
+        <a href="#" onclick="showPage('equipment')">Оборудование</a>
+        <a href="#" onclick="showPage('maintenance')">Обслуживание</a>
+        <a href="#" onclick="showPage('parts')">Запчасти</a>
+    </div>
+    
+    <div class="container">
+        <!-- Главная страница -->
+        <div id="home" class="page active">
+            <div class="card">
+                <h2>📅 Текущий план работ (запрос к БД)</h2>
+                <button class="btn" onclick="loadWorkPlan()">Обновить данные</button>
+                <div id="workPlan">
+                    <div class="loading">Загрузка плана работ...</div>
+                </div>
+            </div>
+            
+            <div class="card warning">
+                <h2>⚠️ Запчасти для пополнения (запрос к БД)</h2>
+                <button class="btn" onclick="loadLowStockParts()">Обновить данные</button>
+                <div id="lowStockParts">
+                    <div class="loading">Загрузка данных о запчастях...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Страница оборудования -->
+        <div id="equipment" class="page">
+            <div class="card">
+                <h2>⚙️ Учет оборудования</h2>
+                <button class="btn" onclick="loadEquipment()">Загрузить из БД</button>
+                <div id="equipmentList">
+                    <div class="loading">Нажмите "Загрузить из БД" для получения данных</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Страница обслуживания -->
+        <div id="maintenance" class="page">
+            <div class="card">
+                <h2>🔧 Работы по обслуживанию</h2>
+                <button class="btn" onclick="loadMaintenance()">Загрузить из БД</button>
+                <div id="maintenanceList">
+                    <div class="loading">Нажмите "Загрузить из БД" для получения данных</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Страница запчастей -->
+        <div id="parts" class="page">
+            <div class="card">
+                <h2>📦 Управление запчастями</h2>
+                <button class="btn" onclick="loadParts()">Загрузить из БД</button>
+                <div id="partsList">
+                    <div class="loading">Нажмите "Загрузить из БД" для получения данных</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        // Навигация
+        function showPage(pageName) {
+            const pages = document.getElementsByClassName('page');
+            for (let i = 0; i < pages.length; i++) {
+                pages[i].classList.remove('active');
+            }
+            document.getElementById(pageName).classList.add('active');
+        }
+
+        // ЗАПРОС 1: План работ
+        async function loadWorkPlan() {
+            const container = document.getElementById('workPlan');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/work-plan`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p>Нет запланированных работ на ближайшие 7 дней</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Оборудование</th>
+                            <th>Клиент</th>
+                            <th>Дата</th>
+                            <th>Тип</th>
+                            <th>Описание</th>
+                        </tr>
+                `;
+                
+                data.forEach(work => {
+                    html += `
+                        <tr>
+                            <td>${work.equipment_name} (${work.model})</td>
+                            <td>${work.client_name}</td>
+                            <td>${work.maintenance_date}</td>
+                            <td>${work.type}</td>
+                            <td>${work.description}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки. Убедитесь, что сервер запущен на localhost:3000</div>';
+            }
+        }
+
+        // ЗАПРОС 2: Запчасти с низким запасом
+        async function loadLowStockParts() {
+            const container = document.getElementById('lowStockParts');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/low-stock-parts`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p>Все запчасти в наличии</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Название</th>
+                            <th>Артикул</th>
+                            <th>В наличии</th>
+                            <th>Минимум</th>
+                            <th>Цена</th>
+                            <th>Нужно заказать</th>
+                        </tr>
+                `;
+                
+                data.forEach(part => {
+                    html += `
+                        <tr>
+                            <td>${part.name}</td>
+                            <td>${part.part_number}</td>
+                            <td>${part.quantity}</td>
+                            <td>${part.min_quantity}</td>
+                            <td>${part.price} руб.</td>
+                            <td><strong>${part.need_to_order}</strong></td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки. Убедитесь, что сервер запущен на localhost:3000</div>';
+            }
+        }
+
+        // Оборудование
+        async function loadEquipment() {
+            const container = document.getElementById('equipmentList');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/equipment`);
+                const data = await response.json();
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Название</th>
+                            <th>Модель</th>
+                            <th>Серийный номер</th>
+                            <th>Местоположение</th>
+                            <th>Клиент</th>
+                            <th>Последнее обслуживание</th>
+                        </tr>
+                `;
+                
+                data.forEach(equip => {
+                    html += `
+                        <tr>
+                            <td>${equip.name}</td>
+                            <td>${equip.model}</td>
+                            <td>${equip.serial_number}</td>
+                            <td>${equip.location}</td>
+                            <td>${equip.client_name}</td>
+                            <td>${equip.last_service}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки. Убедитесь, что сервер запущен на localhost:3000</div>';
+            }
+        }
+
+        // Обслуживание
+        async function loadMaintenance() {
+            const container = document.getElementById('maintenanceList');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/maintenance`);
+                const data = await response.json();
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Оборудование</th>
+                            <th>Дата</th>
+                            <th>Тип</th>
+                            <th>Описание</th>
+                            <th>Стоимость работы</th>
+                            <th>Стоимость запчастей</th>
+                            <th>Всего</th>
+                        </tr>
+                `;
+                
+                data.forEach(work => {
+                    const total = work.work_cost + work.parts_cost;
+                    html += `
+                        <tr>
+                            <td>${work.equipment_name}</td>
+                            <td>${work.maintenance_date}</td>
+                            <td>${work.type}</td>
+                            <td>${work.description}</td>
+                            <td>${work.work_cost} руб.</td>
+                            <td>${work.parts_cost} руб.</td>
+                            <td><strong>${total.toFixed(2)} руб.</strong></td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки. Убедитесь, что сервер запущен на localhost:3000</div>';
+            }
+        }
+
+        // Запчасти
+        async function loadParts() {
+            const container = document.getElementById('partsList');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/parts`);
+                const data = await response.json();
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Название</th>
+                            <th>Артикул</th>
+                            <th>Количество</th>
+                            <th>Минимум</th>
+                            <th>Цена</th>
+                            <th>Статус</th>
+                        </tr>
+                `;
+                
+                data.forEach(part => {
+                    const isLowStock = part.quantity <= part.min_quantity;
+                    const status = isLowStock ? '⚠️ Нужно пополнить' : '✅ В норме';
+                    const rowStyle = isLowStock ? 'style="background-color: #ffe6e6;"' : '';
+                    
+                    html += `
+                        <tr ${rowStyle}>
+                            <td>${part.name}</td>
+                            <td>${part.part_number}</td>
+                            <td>${part.quantity}</td>
+                            <td>${part.min_quantity}</td>
+                            <td>${part.price} руб.</td>
+                            <td>${status}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки. Убедитесь, что сервер запущен на localhost:3000</div>';
+            }
+        }
+
+        // Автозагрузка данных при старте
+        document.addEventListener('DOMContentLoaded', function() {
+            loadWorkPlan();
+            loadLowStockParts();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
+const cors = require('cors');
+const path = require('path');
+
+const app = express();
+const PORT = 3000;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+
+const db = new sqlite3.Database(':memory:');
+
+
+db.serialize(() => {
+    
+    db.run(`CREATE TABLE equipment (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        model TEXT,
+        serial_number TEXT UNIQUE,
+        location TEXT,
+        client_name TEXT,
+        last_service DATE
+    )`);
+
+    
+    db.run(`CREATE TABLE parts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        part_number TEXT UNIQUE,
+        quantity INTEGER,
+        min_quantity INTEGER,
+        price REAL
+    )`);
+
+    
+    db.run(`CREATE TABLE maintenance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        equipment_id INTEGER,
+        maintenance_date DATE,
+        type TEXT,
+        description TEXT,
+        work_cost REAL,
+        parts_cost REAL,
+        FOREIGN KEY (equipment_id) REFERENCES equipment (id)
+    )`);
+
+    
+    const equipmentData = [
+        ['Токарный станок', 'CNC-100', 'TS001', 'Цех №1', 'Завод Металл', '2024-10-01'],
+        ['Фрезерный станок', 'FM-200', 'FS001', 'Цех №2', 'Завод Деталь', '2024-10-15'],
+        ['Пресс', 'P-500', 'PR001', 'Цех №3', 'Машиностроительный', '2024-09-20']
+    ];
+
+    const equipmentStmt = db.prepare(`INSERT INTO equipment 
+        (name, model, serial_number, location, client_name, last_service) 
+        VALUES (?, ?, ?, ?, ?, ?)`);
+    
+    equipmentData.forEach(data => {
+        equipmentStmt.run(data);
+    });
+    equipmentStmt.finalize();
+
+    
+    const partsData = [
+        ['Подшипник', 'BEARING-001', 15, 5, 1200.50],
+        ['Ремень ГРМ', 'BELT-002', 8, 10, 850.75],
+        ['Датчик температуры', 'SENSOR-003', 3, 5, 2100.00],
+        ['Масло моторное', 'OIL-004', 25, 10, 450.25]
+    ];
+
+    const partsStmt = db.prepare(`INSERT INTO parts 
+        (name, part_number, quantity, min_quantity, price) 
+        VALUES (?, ?, ?, ?, ?)`);
+    
+    partsData.forEach(data => {
+        partsStmt.run(data);
+    });
+    partsStmt.finalize();
+
+    
+    const maintenanceData = [
+        [1, '2024-11-15', 'регламентное', 'Плановое ТО', 5000.00, 1200.50],
+        [2, '2024-11-18', 'внеплановое', 'Замена датчика', 3000.00, 2100.00],
+        [3, '2024-11-20', 'регламентное', 'Регулировка', 4500.00, 0.00],
+        [1, '2024-11-25', 'регламентное', 'Очередное ТО', 4000.00, 800.00]
+    ];
+
+    const maintenanceStmt = db.prepare(`INSERT INTO maintenance 
+        (equipment_id, maintenance_date, type, description, work_cost, parts_cost) 
+        VALUES (?, ?, ?, ?, ?, ?)`);
+    
+    maintenanceData.forEach(data => {
+        maintenanceStmt.run(data);
+    });
+    maintenanceStmt.finalize();
+});
+
+
+app.get('/api/work-plan', (req, res) => {
+    const query = `
+        SELECT 
+            e.name as equipment_name,
+            e.model,
+            e.client_name,
+            m.maintenance_date,
+            m.type,
+            m.description
+        FROM maintenance m
+        JOIN equipment e ON m.equipment_id = e.id
+        WHERE m.maintenance_date >= date('now') 
+        AND m.maintenance_date <= date('now', '+7 days')
+        ORDER BY m.maintenance_date
+    `;
+
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows);
+    });
+});
+
+
+app.get('/api/low-stock-parts', (req, res) => {
+    const query = `
+        SELECT 
+            name,
+            part_number,
+            quantity,
+            min_quantity,
+            price,
+            (min_quantity - quantity) as need_to_order
+        FROM parts 
+        WHERE quantity <= min_quantity
+        ORDER BY quantity ASC
+    `;
+
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows);
+    });
+});
+
+
+app.get('/api/equipment', (req, res) => {
+    db.all("SELECT * FROM equipment", [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows);
+    });
+});
+
+
+app.get('/api/maintenance', (req, res) => {
+    const query = `
+        SELECT 
+            m.*,
+            e.name as equipment_name,
+            e.model
+        FROM maintenance m
+        JOIN equipment e ON m.equipment_id = e.id
+        ORDER BY m.maintenance_date DESC
+    `;
+
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows);
+    });
+});
+
+
+app.get('/api/parts', (req, res) => {
+    db.all("SELECT * FROM parts ORDER BY name", [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows);
+    });
+});
+
+app.listen(PORT, () => {
+    console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
+    console.log(`📊 API доступно по адресу http://localhost:${PORT}/api`);
+});

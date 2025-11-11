@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система техобслуживания</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #1abc9c;
+            --warning: #e74c3c;
+            --success: #27ae60;
+            --info: #3498db;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="rgba(255,255,255,0.1)"><circle cx="50" cy="50" r="2"/></svg>');
+        }
+        
+        .nav {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .nav a {
+            color: var(--dark);
+            text-decoration: none;
+            padding: 18px 25px;
+            display: inline-block;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.95);
+            padding: 30px;
+            margin: 25px 0;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--accent);
+            backdrop-filter: blur(10px);
+        }
+        
+        .card.warning {
+            border-left-color: var(--warning);
+        }
+        
+        .card.success {
+            border-left-color: var(--success);
+        }
+        
+        .card.info {
+            border-left-color: var(--info);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin: 25px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2.8em;
+            font-weight: bold;
+            margin: 15px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .stat-label {
+            font-size: 0.95em;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        th, td {
+            padding: 15px 18px;
+            text-align: left;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        
+        th {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .status-planned { background: #fff3cd; color: #856404; }
+        .status-in-progress { background: #cce7ff; color: #004085; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-new { background: #e2e3e5; color: #383d41; }
+        .status-in-work { background: #cce7ff; color: #004085; }
+        .status-resolved { background: #d4edda; color: #155724; }
+        
+        .difficulty-low { background: #d4edda; color: #155724; }
+        .difficulty-medium { background: #fff3cd; color: #856404; }
+        .difficulty-high { background: #f8d7da; color: #721c24; }
+        
+        .urgency-high { background: #f8d7da; color: #721c24; }
+        .urgency-critical { background: #dc3545; color: white; font-weight: bold; }
+        
+        .page {
+            display: none;
+        }
+        
+        .active {
+            display: block;
+        }
+        
+        .loading {
+            color: #666;
+            text-align: center;
+            padding: 50px;
+            font-size: 1.1em;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, var(--accent), #16a085);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 0.95em;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(26, 188, 156, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary), #2c3e50);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning), #c0392b);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #219a52);
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, var(--info), #2980b9);
+        }
+        
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.85em;
+        }
+        
+        .error {
+            color: var(--warning);
+            padding: 15px;
+            background: #ffe6e6;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid var(--warning);
+        }
+        
+        .success {
+            color: var(--success);
+            padding: 15px;
+            background: #e6ffe6;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid var(--success);
+        }
+        
+        .form-group {
+            margin: 18px 0;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        
+        .form-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.1);
+            outline: none;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 10px 0;
+        }
+        
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .radio-label input[type="radio"] {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            max-width: 700px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .close {
+            font-size: 1.8em;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .timer {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary);
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .report-controls {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border: 1px solid #dee2e6;
+        }
+        
+        .report-results {
+            margin-top: 25px;
+        }
+        
+        .saved-reports {
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .nav a {
+                padding: 15px 20px;
+                font-size: 0.9em;
+            }
+            
+            .container {
+                padding: 0 15px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            th, td {
+                padding: 12px 15px;
+            }
+            
+            .form-row {
+                gap: 15px;
+            }
+            
+            .form-row .form-group {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏭 Система управления техобслуживанием</h1>
+        <p>Комплексное решение для управления оборудованием и техническим обслуживанием</p>
+    </div>
+    
+    <div class="nav">
+        <a href="#" onclick="showPage('home')">📊 Главная</a>
+        <a href="#" onclick="showPage('clients')">👥 Клиенты</a>
+        <a href="#" onclick="showPage('equipment')">⚙️ Оборудование</a>
+        <a href="#" onclick="showPage('maintenance')">🔧 Обслуживание</a>
+        <a href="#" onclick="showPage('parts')">📦 Запчасти</a>
+        <a href="#" onclick="showPage('requests')">📋 Заявки</a>
+        <a href="#" onclick="showPage('reports')">📈 Отчеты</a>
+    </div>
+    
+    <div class="container">
+        <div id="home" class="page active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Всего оборудования</div>
+                    <div class="stat-number" id="totalEquipment">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Активные работы</div>
+                    <div class="stat-number" id="activeMaintenance">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Запчасти для пополнения</div>
+                    <div class="stat-number" id="lowStockParts">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Выполнено в этом месяце</div>
+                    <div class="stat-number" id="completedThisMonth">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Новые заявки</div>
+                    <div class="stat-number" id="newRequests">0</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📅 Текущий план работ</h2>
+                <div class="action-buttons">
+                    <button class="btn" onclick="loadWorkPlan()">🔄 Обновить</button>
+                    <button class="btn btn-secondary" onclick="showMaintenanceModal()">➕ Добавить работу</button>
+                </div>
+                <div id="workPlan">
+                    <div class="loading">Загрузка плана работ...</div>
+                </div>
+            </div>
+            
+            <div class="card warning">
+                <h2>⚠️ Запчасти для пополнения</h2>
+                <button class="btn" onclick="loadLowStockParts()">🔄 Обновить</button>
+                <div id="lowStockPartsList">
+                    <div class="loading">Загрузка данных о запчастях...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="clients" class="page">
+            <div class="card">
+                <h2>👥 Управление клиентами</h2>
+                <div class="action-buttons">
+                    <button class="btn" onclick="loadClients()">🔄 Загрузить клиентов</button>
+                    <button class="btn btn-secondary" onclick="showClientModal()">➕ Добавить клиента</button>
+                </div>
+                <div id="clientsList">
+                    <div class="loading">Нажмите "Загрузить клиентов" для получения данных</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="equipment" class="page">
+            <div class="card">
+                <h2>⚙️ Учет оборудования</h2>
+                <div class="action-buttons">
+                    <button class="btn" onclick="loadEquipment()">🔄 Загрузить из БД</button>
+                    <button class="btn btn-secondary" onclick="showEquipmentModal()">➕ Добавить оборудование</button>
+                </div>
+                <div id="equipmentList">
+                    <div class="loading">Нажмите "Загрузить из БД" для получения данных</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="maintenance" class="page">
+            <div class="card">
+                <h2>🔧 Работы по обслуживанию</h2>
+                <div class="action-buttons">
+                    <button class="btn" onclick="loadMaintenance()">🔄 Загрузить из БД</button>
+                    <button class="btn btn-secondary" onclick="showMaintenanceModal()">➕ Добавить работу</button>
+                </div>
+                <div id="maintenanceList">
+                    <div class="loading">Нажмите "Загрузить из БД" для получения данных</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="parts" class="page">
+            <div class="card">
+                <h2>📦 Управление запчастями</h2>
+                <div class="action-buttons">
+                    <button class="btn" onclick="loadParts()">🔄 Загрузить из БД</button>
+                    <button class="btn btn-secondary" onclick="showPartModal()">➕ Добавить запчасть</button>
+                </div>
+                <div id="partsList">
+                    <div class="loading">Нажмите "Загрузить из БД" для получения данных</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="requests" class="page">
+            <div class="card">
+                <h2>📋 Заявки на обслуживание</h2>
+                <div class="action-buttons">
+                    <button class="btn" onclick="loadServiceRequests()">🔄 Загрузить заявки</button>
+                    <button class="btn btn-secondary" onclick="showNewRequestModal()">➕ Новая заявка</button>
+                </div>
+                <div id="serviceRequestsList">
+                    <div class="loading">Нажмите "Загрузить заявки" для получения данных</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="reports" class="page">
+            <div class="card">
+                <h2>📈 Отчеты по обслуживанию</h2>
+                
+                <div class="report-controls">
+                    <h3>📊 Сформировать отчет</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Дата начала:</label>
+                            <input type="date" id="reportStartDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Дата окончания:</label>
+                            <input type="date" id="reportEndDate" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Тип отчета:</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="reportType" value="maintenance" checked>
+                                Отчет по обслуживанию
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="reportType" value="financial">
+                                Финансовый отчет
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="reportType" value="technician">
+                                Отчет по техникам
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Дополнительные параметры:</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="includeCosts" checked>
+                                Включать стоимость
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="includeParts" checked>
+                                Включать запчасти
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="groupByClient">
+                                Группировать по клиентам
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" onclick="generateReport()">📊 Сформировать отчет</button>
+                        <button class="btn btn-success" onclick="saveReport()">💾 Сохранить отчет</button>
+                        <button class="btn btn-info" onclick="downloadReport()">📥 Скачать отчет</button>
+                    </div>
+                </div>
+                
+                <div id="reportResults" class="report-results">
+                    <div class="loading">Установите период и нажмите "Сформировать отчет"</div>
+                </div>
+                
+                <div class="saved-reports">
+                    <h3>📁 Сохраненные отчеты</h3>
+                    <button class="btn" onclick="loadSavedReports()">🔄 Загрузить сохраненные отчеты</button>
+                    <div id="savedReportsList">
+                        <div class="loading">Нажмите "Загрузить сохраненные отчеты"</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="clientModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="clientModalTitle">➕ Добавить клиента</h3>
+                <span class="close" onclick="closeModal('clientModal')">&times;</span>
+            </div>
+            <form id="clientForm">
+                <input type="hidden" id="clientId" name="id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Название компании *</label>
+                        <input type="text" class="form-control" id="clientName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Контактное лицо *</label>
+                        <input type="text" class="form-control" id="clientContact" name="contact_person" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Телефон *</label>
+                        <input type="tel" class="form-control" id="clientPhone" name="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" class="form-control" id="clientEmail" name="email">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Адрес</label>
+                    <textarea class="form-control" id="clientAddress" name="address" rows="3"></textarea>
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn">💾 Сохранить</button>
+                    <button type="button" class="btn btn-warning" onclick="closeModal('clientModal')">❌ Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="equipmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="equipmentModalTitle">➕ Добавить оборудование</h3>
+                <span class="close" onclick="closeModal('equipmentModal')">&times;</span>
+            </div>
+            <form id="equipmentForm">
+                <input type="hidden" id="equipmentId" name="id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Название *</label>
+                        <input type="text" class="form-control" id="equipmentName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Модель</label>
+                        <input type="text" class="form-control" id="equipmentModel" name="model">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Серийный номер *</label>
+                        <input type="text" class="form-control" id="equipmentSerial" name="serial_number" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Местоположение</label>
+                        <input type="text" class="form-control" id="equipmentLocation" name="location">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Клиент *</label>
+                        <select class="form-control" id="equipmentClient" name="client_id" required>
+                            <option value="">Выберите клиента...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Дата установки</label>
+                        <input type="date" class="form-control" id="equipmentInstallDate" name="installation_date">
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn">💾 Сохранить</button>
+                    <button type="button" class="btn btn-warning" onclick="closeModal('equipmentModal')">❌ Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="maintenanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="maintenanceModalTitle">➕ Добавить работу по обслуживанию</h3>
+                <span class="close" onclick="closeModal('maintenanceModal')">&times;</span>
+            </div>
+            <form id="maintenanceForm">
+                <input type="hidden" id="maintenanceId" name="id">
+                <div class="form-group">
+                    <label>Оборудование *</label>
+                    <select class="form-control" id="maintenanceEquipment" name="equipment_id" required>
+                        <option value="">Выберите оборудование...</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Дата *</label>
+                        <input type="date" class="form-control" id="maintenanceDate" name="maintenance_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Тип работ *</label>
+                        <select class="form-control" id="maintenanceType" name="type" required>
+                            <option value="регламентное">Регламентное</option>
+                            <option value="внеплановое">Внеплановое</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Описание работ *</label>
+                    <textarea class="form-control" id="maintenanceDescription" name="description" rows="3" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Сложность работ</label>
+                        <select class="form-control" id="maintenanceDifficulty" name="difficulty">
+                            <option value="low">Низкая</option>
+                            <option value="medium" selected>Средняя</option>
+                            <option value="high">Высокая</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Плановые часы</label>
+                        <input type="number" step="0.5" class="form-control" id="maintenanceHours" name="duration_hours" min="0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Техник</label>
+                        <input type="text" class="form-control" id="maintenanceTechnician" name="technician">
+                    </div>
+                    <div class="form-group">
+                        <label>Стоимость работ (руб.)</label>
+                        <input type="number" step="0.01" class="form-control" id="maintenanceWorkCost" name="work_cost">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Стоимость запчастей (руб.)</label>
+                    <input type="number" step="0.01" class="form-control" id="maintenancePartsCost" name="parts_cost">
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn">💾 Сохранить</button>
+                    <button type="button" class="btn btn-warning" onclick="closeModal('maintenanceModal')">❌ Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="partModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="partModalTitle">➕ Добавить запчасть</h3>
+                <span class="close" onclick="closeModal('partModal')">&times;</span>
+            </div>
+            <form id="partForm">
+                <input type="hidden" id="partId" name="id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Название *</label>
+                        <input type="text" class="form-control" id="partName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Артикул *</label>
+                        <input type="text" class="form-control" id="partNumber" name="part_number" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Количество *</label>
+                        <input type="number" class="form-control" id="partQuantity" name="quantity" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Минимальное количество *</label>
+                        <input type="number" class="form-control" id="partMinQuantity" name="min_quantity" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Цена (руб.)</label>
+                        <input type="number" step="0.01" class="form-control" id="partPrice" name="price">
+                    </div>
+                    <div class="form-group">
+                        <label>Категория</label>
+                        <select class="form-control" id="partCategory" name="category">
+                            <option value="">Выберите категорию...</option>
+                            <option value="механика">Механика</option>
+                            <option value="электроника">Электроника</option>
+                            <option value="смазка">Смазка</option>
+                            <option value="фильтры">Фильтры</option>
+                            <option value="инструмент">Инструмент</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Поставщик</label>
+                    <input type="text" class="form-control" id="partSupplier" name="supplier">
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn">💾 Сохранить</button>
+                    <button type="button" class="btn btn-warning" onclick="closeModal('partModal')">❌ Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="newRequestModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ Новая заявка на обслуживание</h3>
+                <span class="close" onclick="closeModal('newRequestModal')">&times;</span>
+            </div>
+            <form id="newRequestForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Клиент *</label>
+                        <input type="text" class="form-control" name="client_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Контактное лицо *</label>
+                        <input type="text" class="form-control" name="contact_person" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Телефон *</label>
+                        <input type="tel" class="form-control" name="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Срочность</label>
+                        <select class="form-control" name="urgency">
+                            <option value="низкая">Низкая</option>
+                            <option value="средняя" selected>Средняя</option>
+                            <option value="высокая">Высокая</option>
+                            <option value="критическая">Критическая</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Оборудование *</label>
+                        <input type="text" class="form-control" name="equipment_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Модель</label>
+                        <input type="text" class="form-control" name="equipment_model">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Серийный номер</label>
+                        <input type="text" class="form-control" name="serial_number">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Описание проблемы *</label>
+                    <textarea class="form-control" name="problem_description" rows="4" required placeholder="Подробно опишите проблему с оборудованием..."></textarea>
+                </div>
+                <button type="submit" class="btn">📨 Отправить заявку</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="timerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⏱️ Таймер работы</h3>
+                <span class="close" onclick="closeModal('timerModal')">&times;</span>
+            </div>
+            <div style="text-align: center; padding: 30px;">
+                <div class="timer" id="workTimer">00:00:00</div>
+                <div style="margin: 20px 0;">
+                    <p id="timerInfo">Работа: </p>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-success" onclick="startWorkTimer()" id="startTimerBtn">▶️ Начать работу</button>
+                    <button class="btn btn-warning" onclick="stopWorkTimer()" id="stopTimerBtn" disabled>⏹️ Завершить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let currentTimer = null;
+        let timerInterval = null;
+        let timerStartTime = null;
+        let currentMaintenanceId = null;
+
+        function showPage(pageName) {
+            const pages = document.getElementsByClassName('page');
+            for (let i = 0; i < pages.length; i++) {
+                pages[i].classList.remove('active');
+            }
+            document.getElementById(pageName).classList.add('active');
+            
+            if (pageName === 'home') {
+                loadDashboardStats();
+                loadWorkPlan();
+                loadLowStockParts();
+            } else if (pageName === 'clients') {
+                loadClients();
+            } else if (pageName === 'equipment') {
+                loadEquipment();
+                loadClientsForSelect();
+            } else if (pageName === 'maintenance') {
+                loadMaintenance();
+                loadEquipmentForSelect();
+            } else if (pageName === 'parts') {
+                loadParts();
+            } else if (pageName === 'requests') {
+                loadServiceRequests();
+            } else if (pageName === 'reports') {
+                const now = new Date();
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                document.getElementById('reportStartDate').value = firstDay.toISOString().split('T')[0];
+                document.getElementById('reportEndDate').value = now.toISOString().split('T')[0];
+            }
+        }
+
+        function showModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            const form = document.getElementById(modalId).querySelector('form');
+            if (form) form.reset();
+        }
+
+        function showClientModal(client = null) {
+            const title = document.getElementById('clientModalTitle');
+            const form = document.getElementById('clientForm');
+            
+            if (client) {
+                title.textContent = '✏️ Редактировать клиента';
+                document.getElementById('clientId').value = client.id;
+                document.getElementById('clientName').value = client.name;
+                document.getElementById('clientContact').value = client.contact_person;
+                document.getElementById('clientPhone').value = client.phone;
+                document.getElementById('clientEmail').value = client.email || '';
+                document.getElementById('clientAddress').value = client.address || '';
+            } else {
+                title.textContent = '➕ Добавить клиента';
+                form.reset();
+                document.getElementById('clientId').value = '';
+            }
+            showModal('clientModal');
+        }
+
+        function showEquipmentModal(equipment = null) {
+            const title = document.getElementById('equipmentModalTitle');
+            const form = document.getElementById('equipmentForm');
+            
+            if (equipment) {
+                title.textContent = '✏️ Редактировать оборудование';
+                document.getElementById('equipmentId').value = equipment.id;
+                document.getElementById('equipmentName').value = equipment.name;
+                document.getElementById('equipmentModel').value = equipment.model || '';
+                document.getElementById('equipmentSerial').value = equipment.serial_number;
+                document.getElementById('equipmentLocation').value = equipment.location || '';
+                document.getElementById('equipmentClient').value = equipment.client_id;
+                document.getElementById('equipmentInstallDate').value = equipment.installation_date || '';
+            } else {
+                title.textContent = '➕ Добавить оборудование';
+                form.reset();
+                document.getElementById('equipmentId').value = '';
+            }
+            showModal('equipmentModal');
+        }
+
+        function showMaintenanceModal(maintenance = null) {
+            const title = document.getElementById('maintenanceModalTitle');
+            const form = document.getElementById('maintenanceForm');
+            
+            if (maintenance) {
+                title.textContent = '✏️ Редактировать работу';
+                document.getElementById('maintenanceId').value = maintenance.id;
+                document.getElementById('maintenanceEquipment').value = maintenance.equipment_id;
+                document.getElementById('maintenanceDate').value = maintenance.maintenance_date;
+                document.getElementById('maintenanceType').value = maintenance.type;
+                document.getElementById('maintenanceDescription').value = maintenance.description;
+                document.getElementById('maintenanceDifficulty').value = maintenance.difficulty || 'medium';
+                document.getElementById('maintenanceHours').value = maintenance.duration_hours || '';
+                document.getElementById('maintenanceTechnician').value = maintenance.technician || '';
+                document.getElementById('maintenanceWorkCost').value = maintenance.work_cost || '';
+                document.getElementById('maintenancePartsCost').value = maintenance.parts_cost || '';
+            } else {
+                title.textContent = '➕ Добавить работу';
+                form.reset();
+                document.getElementById('maintenanceId').value = '';
+                document.getElementById('maintenanceDate').value = new Date().toISOString().split('T')[0];
+            }
+            showModal('maintenanceModal');
+        }
+
+        function showPartModal(part = null) {
+            const title = document.getElementById('partModalTitle');
+            const form = document.getElementById('partForm');
+            
+            if (part) {
+                title.textContent = '✏️ Редактировать запчасть';
+                document.getElementById('partId').value = part.id;
+                document.getElementById('partName').value = part.name;
+                document.getElementById('partNumber').value = part.part_number;
+                document.getElementById('partQuantity').value = part.quantity;
+                document.getElementById('partMinQuantity').value = part.min_quantity;
+                document.getElementById('partPrice').value = part.price || '';
+                document.getElementById('partCategory').value = part.category || '';
+                document.getElementById('partSupplier').value = part.supplier || '';
+            } else {
+                title.textContent = '➕ Добавить запчасть';
+                form.reset();
+                document.getElementById('partId').value = '';
+            }
+            showModal('partModal');
+        }
+
+        function showNewRequestModal() {
+            showModal('newRequestModal');
+        }
+
+        function showTimerModal(maintenanceId, equipmentName) {
+            currentMaintenanceId = maintenanceId;
+            document.getElementById('timerInfo').textContent = `Работа: ${equipmentName}`;
+            document.getElementById('workTimer').textContent = '00:00:00';
+            document.getElementById('startTimerBtn').disabled = false;
+            document.getElementById('stopTimerBtn').disabled = true;
+            showModal('timerModal');
+        }
+
+        function startWorkTimer() {
+            if (!currentMaintenanceId) return;
+            
+            fetch(`${API_BASE}/maintenance/${currentMaintenanceId}/start`, {
+                method: 'PUT'
+            }).then(response => response.json())
+            .then(data => {
+                timerStartTime = new Date();
+                document.getElementById('startTimerBtn').disabled = true;
+                document.getElementById('stopTimerBtn').disabled = false;
+                
+                timerInterval = setInterval(updateTimer, 1000);
+                showMessage('Работа начата!', 'success');
+            }).catch(error => {
+                showMessage('Ошибка запуска таймера', 'error');
+            });
+        }
+
+        function stopWorkTimer() {
+            if (!currentMaintenanceId || !timerInterval) return;
+            
+            clearInterval(timerInterval);
+            
+            fetch(`${API_BASE}/maintenance/${currentMaintenanceId}/complete`, {
+                method: 'PUT'
+            }).then(response => response.json())
+            .then(data => {
+                document.getElementById('startTimerBtn').disabled = false;
+                document.getElementById('stopTimerBtn').disabled = true;
+                showMessage(`Работа завершена! Затрачено времени: ${data.actual_hours} ч.`, 'success');
+                closeModal('timerModal');
+                loadMaintenance();
+            }).catch(error => {
+                showMessage('Ошибка завершения работы', 'error');
+            });
+        }
+
+        function updateTimer() {
+            if (!timerStartTime) return;
+            
+            const now = new Date();
+            const diff = now - timerStartTime;
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            
+            document.getElementById('workTimer').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        async function loadClientsForSelect() {
+            try {
+                const response = await fetch(`${API_BASE}/clients`);
+                const clients = await response.json();
+                
+                const select = document.getElementById('equipmentClient');
+                select.innerHTML = '<option value="">Выберите клиента...</option>';
+                
+                clients.forEach(client => {
+                    const option = document.createElement('option');
+                    option.value = client.id;
+                    option.textContent = client.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки клиентов:', error);
+            }
+        }
+
+        async function loadEquipmentForSelect() {
+            try {
+                const response = await fetch(`${API_BASE}/equipment`);
+                const equipment = await response.json();
+                
+                const select = document.getElementById('maintenanceEquipment');
+                select.innerHTML = '<option value="">Выберите оборудование...</option>';
+                
+                equipment.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${item.name} (${item.model}) - ${item.client_name}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки оборудования:', error);
+            }
+        }
+
+        async function loadDashboardStats() {
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/stats`);
+                const stats = await response.json();
+                
+                document.getElementById('totalEquipment').textContent = stats.totalEquipment || 0;
+                document.getElementById('activeMaintenance').textContent = stats.activeMaintenance || 0;
+                document.getElementById('lowStockParts').textContent = stats.lowStockParts || 0;
+                document.getElementById('completedThisMonth').textContent = stats.completedThisMonth || 0;
+                document.getElementById('newRequests').textContent = stats.newRequests || 0;
+            } catch (error) {
+                console.error('Ошибка загрузки статистики:', error);
+            }
+        }
+
+        async function loadClients() {
+            const container = document.getElementById('clientsList');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/clients`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p>Нет клиентов в базе данных</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Название</th>
+                            <th>Контактное лицо</th>
+                            <th>Телефон</th>
+                            <th>Email</th>
+                            <th>Адрес</th>
+                            <th>Действия</th>
+                        </tr>
+                `;
+                
+                data.forEach(client => {
+                    html += `
+                        <tr>
+                            <td>${client.name}</td>
+                            <td>${client.contact_person}</td>
+                            <td>${client.phone}</td>
+                            <td>${client.email || '-'}</td>
+                            <td>${client.address || '-'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="showClientModal(${JSON.stringify(client).replace(/"/g, '&quot;')})">✏️</button>
+                                <button class="btn btn-sm btn-warning" onclick="deleteClient(${client.id})">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки. Убедитесь, что сервер запущен на localhost:3000</div>';
+            }
+        }
+
+        async function loadEquipment() {
+            const container = document.getElementById('equipmentList');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/equipment`);
+                const data = await response.json();
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Название</th>
+                            <th>Модель</th>
+                            <th>Серийный номер</th>
+                            <th>Местоположение</th>
+                            <th>Клиент</th>
+                            <th>Дата установки</th>
+                            <th>Действия</th>
+                        </tr>
+                `;
+                
+                data.forEach(equip => {
+                    html += `
+                        <tr>
+                            <td>${equip.name}</td>
+                            <td>${equip.model}</td>
+                            <td>${equip.serial_number}</td>
+                            <td>${equip.location}</td>
+                            <td>${equip.client_name}</td>
+                            <td>${equip.installation_date || '-'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="showEquipmentModal(${JSON.stringify(equip).replace(/"/g, '&quot;')})">✏️</button>
+                                <button class="btn btn-sm btn-warning" onclick="deleteEquipment(${equip.id})">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки. Убедитесь, что сервер запущен на localhost:3000</div>';
+            }
+        }
+
+        async function loadMaintenance() {
+            const container = document.getElementById('maintenanceList');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/maintenance`);
+                const data = await response.json();
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Оборудование</th>
+                            <th>Дата</th>
+                            <th>Тип</th>
+                            <th>Сложность</th>
+                            <th>Техник</th>
+                            <th>Статус</th>
+                            <th>Время</th>
+                            <th>Стоимость</th>
+                            <th>Действия</th>
+                        </tr>
+                `;
+                
+                data.forEach(work => {
+                    const total = (work.work_cost || 0) + (work.parts_cost || 0);
+                    const statusClass = `status-${work.status.replace('_', '-')}`;
+                    const difficultyClass = `difficulty-${work.difficulty}`;
+                    const difficultyText = getDifficultyText(work.difficulty);
+                    const timeInfo = work.actual_hours ? 
+                        `${work.actual_hours}ч (из ${work.duration_hours}ч)` : 
+                        `${work.duration_hours}ч (план)`;
+                    
+                    html += `
+                        <tr>
+                            <td>${work.equipment_name}</td>
+                            <td>${work.maintenance_date}</td>
+                            <td>${work.type}</td>
+                            <td><span class="status-badge ${difficultyClass}">${difficultyText}</span></td>
+                            <td>${work.technician || '-'}</td>
+                            <td><span class="status-badge ${statusClass}">${getStatusText(work.status)}</span></td>
+                            <td>${timeInfo}</td>
+                            <td><strong>${total.toFixed(2)} руб.</strong></td>
+                            <td>
+                                ${work.status === 'planned' ? `
+                                    <button class="btn btn-sm btn-success" onclick="showTimerModal(${work.id}, '${work.equipment_name}')">⏱️ Начать</button>
+                                ` : ''}
+                                ${work.status === 'in_progress' ? `
+                                    <button class="btn btn-sm btn-warning" onclick="showTimerModal(${work.id}, '${work.equipment_name}')">⏱️ В работе</button>
+                                ` : ''}
+                                <button class="btn btn-sm btn-info" onclick="showMaintenanceModal(${JSON.stringify(work).replace(/"/g, '&quot;')})">✏️</button>
+                                <button class="btn btn-sm btn-warning" onclick="deleteMaintenance(${work.id})">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки. Убедитесь, что сервер запущен на localhost:3000</div>';
+            }
+        }
+
+        async function loadParts() {
+            const container = document.getElementById('partsList');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/parts`);
+                const data = await response.json();
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Название</th>
+                            <th>Артикул</th>
+                            <th>Количество</th>
+                            <th>Минимум</th>
+                            <th>Цена</th>
+                            <th>Категория</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                `;
+                
+                data.forEach(part => {
+                    const isLowStock = part.quantity <= part.min_quantity;
+                    const status = isLowStock ? '⚠️ Нужно пополнить' : '✅ В норме';
+                    const rowStyle = isLowStock ? 'style="background-color: #ffe6e6;"' : '';
+                    
+                    html += `
+                        <tr ${rowStyle}>
+                            <td>${part.name}</td>
+                            <td>${part.part_number}</td>
+                            <td>${part.quantity}</td>
+                            <td>${part.min_quantity}</td>
+                            <td>${part.price || 0} руб.</td>
+                            <td>${part.category || '-'}</td>
+                            <td>${status}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="showPartModal(${JSON.stringify(part).replace(/"/g, '&quot;')})">✏️</button>
+                                <button class="btn btn-sm btn-warning" onclick="deletePart(${part.id})">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки. Убедитесь, что сервер запущен на localhost:3000</div>';
+            }
+        }
+
+        async function loadServiceRequests() {
+            const container = document.getElementById('serviceRequestsList');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/service-requests`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p>Нет заявок на обслуживание</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Клиент</th>
+                            <th>Оборудование</th>
+                            <th>Проблема</th>
+                            <th>Срочность</th>
+                            <th>Статус</th>
+                            <th>Дата создания</th>
+                            <th>Техник</th>
+                            <th>Действия</th>
+                        </tr>
+                `;
+                
+                data.forEach(request => {
+                    const statusClass = `status-${request.status.replace(' ', '-')}`;
+                    const urgencyClass = request.urgency === 'критическая' || request.urgency === 'высокая' ? `urgency-${request.urgency}` : '';
+                    
+                    html += `
+                        <tr>
+                            <td>${request.client_name}</td>
+                            <td>${request.equipment_name} ${request.equipment_model ? '(' + request.equipment_model + ')' : ''}</td>
+                            <td title="${request.problem_description}">${request.problem_description.substring(0, 50)}${request.problem_description.length > 50 ? '...' : ''}</td>
+                            <td><span class="${urgencyClass}">${request.urgency}</span></td>
+                            <td><span class="status-badge ${statusClass}">${getRequestStatusText(request.status)}</span></td>
+                            <td>${formatDateTime(request.created_date)}</td>
+                            <td>${request.assigned_technician || '-'}</td>
+                            <td>
+                                ${request.status === 'новая' ? `
+                                    <button class="btn btn-sm btn-success" onclick="assignTechnician(${request.id})">👨‍🔧 Назначить</button>
+                                    <button class="btn btn-sm btn-warning" onclick="deleteRequest(${request.id})">🗑️</button>
+                                ` : ''}
+                                ${request.status === 'в работе' ? `
+                                    <button class="btn btn-sm btn-success" onclick="addSolution(${request.id})">✅ Решение</button>
+                                ` : ''}
+                                ${request.status === 'решена' ? `
+                                    <button class="btn btn-sm" onclick="viewSolution(${request.id})">📋 Просмотр</button>
+                                    <button class="btn btn-sm btn-warning" onclick="deleteRequest(${request.id})">🗑️</button>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки. Убедитесь, что сервер запущен на localhost:3000</div>';
+            }
+        }
+
+        async function generateReport() {
+            const container = document.getElementById('reportResults');
+            const startDate = document.getElementById('reportStartDate').value;
+            const endDate = document.getElementById('reportEndDate').value;
+            const reportType = document.querySelector('input[name="reportType"]:checked').value;
+            
+            if (!startDate || !endDate) {
+                container.innerHTML = '<div class="error">Укажите период для отчета</div>';
+                return;
+            }
+            
+            container.innerHTML = '<div class="loading">Формирование отчета...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/reports/maintenance?startDate=${startDate}&endDate=${endDate}`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p>Нет данных за выбранный период</p>';
+                    return;
+                }
+                
+                let totalCost = 0;
+                let totalWorkCost = 0;
+                let totalPartsCost = 0;
+                let totalHours = 0;
+                let totalActualHours = 0;
+                
+                let html = `
+                    <div class="card info">
+                        <h3>Отчет по обслуживанию за период ${startDate} - ${endDate}</h3>
+                        <table>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Оборудование</th>
+                                <th>Клиент</th>
+                                <th>Тип работ</th>
+                                <th>Техник</th>
+                                <th>Сложность</th>
+                                <th>Стоимость работ</th>
+                                <th>Стоимость запчастей</th>
+                                <th>Общая стоимость</th>
+                                <th>Время (план/факт)</th>
+                                <th>Статус</th>
+                            </tr>
+                `;
+                
+                data.forEach(work => {
+                    totalWorkCost += work.work_cost || 0;
+                    totalPartsCost += work.parts_cost || 0;
+                    totalCost += work.total_cost || 0;
+                    totalHours += work.duration_hours || 0;
+                    totalActualHours += work.actual_hours || 0;
+                    const statusClass = `status-${work.status.replace('_', '-')}`;
+                    const difficultyClass = `difficulty-${work.difficulty}`;
+                    const difficultyText = getDifficultyText(work.difficulty);
+                    const timeInfo = work.actual_hours ? 
+                        `${work.actual_hours}ч / ${work.duration_hours}ч` : 
+                        `- / ${work.duration_hours}ч`;
+                    
+                    html += `
+                        <tr>
+                            <td>${work.maintenance_date}</td>
+                            <td>${work.equipment_name}</td>
+                            <td>${work.client_name}</td>
+                            <td>${work.type}</td>
+                            <td>${work.technician || '-'}</td>
+                            <td><span class="status-badge ${difficultyClass}">${difficultyText}</span></td>
+                            <td>${(work.work_cost || 0).toFixed(2)} руб.</td>
+                            <td>${(work.parts_cost || 0).toFixed(2)} руб.</td>
+                            <td>${(work.total_cost || 0).toFixed(2)} руб.</td>
+                            <td>${timeInfo}</td>
+                            <td><span class="status-badge ${statusClass}">${getStatusText(work.status)}</span></td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                    </table>
+                    <div class="card success" style="margin-top: 20px;">
+                        <h4>📈 Итоги отчета:</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div>
+                                <strong>Количество работ:</strong><br>
+                                <span style="font-size: 1.5em;">${data.length}</span>
+                            </div>
+                            <div>
+                                <strong>Общая стоимость работ:</strong><br>
+                                <span style="font-size: 1.5em;">${totalWorkCost.toFixed(2)} руб.</span>
+                            </div>
+                            <div>
+                                <strong>Общая стоимость запчастей:</strong><br>
+                                <span style="font-size: 1.5em;">${totalPartsCost.toFixed(2)} руб.</span>
+                            </div>
+                            <div>
+                                <strong>Общая сумма:</strong><br>
+                                <span style="font-size: 1.5em; color: var(--success);">${totalCost.toFixed(2)} руб.</span>
+                            </div>
+                            <div>
+                                <strong>Общее время (план/факт):</strong><br>
+                                <span style="font-size: 1.5em;">${totalHours.toFixed(1)}ч / ${totalActualHours.toFixed(1)}ч</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+                
+                window.currentReportData = {
+                    name: `Отчет по обслуживанию ${startDate} - ${endDate}`,
+                    type: reportType,
+                    period_start: startDate,
+                    period_end: endDate,
+                    data: data
+                };
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка формирования отчета</div>';
+            }
+        }
+
+        async function saveReport() {
+            if (!window.currentReportData) {
+                showMessage('Сначала сформируйте отчет', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/reports`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(window.currentReportData)
+                });
+                
+                if (response.ok) {
+                    showMessage('Отчет успешно сохранен!', 'success');
+                    loadSavedReports();
+                } else {
+                    showMessage('Ошибка сохранения отчета', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка сохранения отчета', 'error');
+            }
+        }
+
+        async function downloadReport() {
+            if (!window.currentReportData) {
+                showMessage('Сначала сформируйте отчет', 'error');
+                return;
+            }
+            
+            try {
+                let reportContent = `ОТЧЕТ: ${window.currentReportData.name}\n`;
+                reportContent += `Тип: ${window.currentReportData.type}\n`;
+                reportContent += `Период: ${window.currentReportData.period_start} - ${window.currentReportData.period_end}\n`;
+                reportContent += `Дата формирования: ${new Date().toLocaleString('ru-RU')}\n\n`;
+                reportContent += "ДЕТАЛИ РАБОТ:\n";
+                reportContent += "=".repeat(80) + "\n\n";
+                
+                window.currentReportData.data.forEach((work, index) => {
+                    reportContent += `РАБОТА ${index + 1}:\n`;
+                    reportContent += `Оборудование: ${work.equipment_name}\n`;
+                    reportContent += `Клиент: ${work.client_name}\n`;
+                    reportContent += `Дата: ${work.maintenance_date}\n`;
+                    reportContent += `Тип: ${work.type}\n`;
+                    reportContent += `Техник: ${work.technician || 'Не назначен'}\n`;
+                    reportContent += `Сложность: ${getDifficultyText(work.difficulty)}\n`;
+                    reportContent += `Стоимость работ: ${(work.work_cost || 0).toFixed(2)} руб.\n`;
+                    reportContent += `Стоимость запчастей: ${(work.parts_cost || 0).toFixed(2)} руб.\n`;
+                    reportContent += `Общая стоимость: ${(work.total_cost || 0).toFixed(2)} руб.\n`;
+                    reportContent += `Время: ${work.actual_hours ? work.actual_hours + 'ч (факт)' : work.duration_hours + 'ч (план)'}\n`;
+                    reportContent += `Статус: ${getStatusText(work.status)}\n`;
+                    reportContent += "-".repeat(40) + "\n\n";
+                });
+                
+                const totalCost = window.currentReportData.data.reduce((sum, item) => sum + (item.total_cost || 0), 0);
+                const totalWorks = window.currentReportData.data.length;
+                
+                reportContent += "ИТОГИ:\n";
+                reportContent += "=".repeat(80) + "\n";
+                reportContent += `Количество работ: ${totalWorks}\n`;
+                reportContent += `Общая стоимость: ${totalCost.toFixed(2)} руб.\n`;
+                reportContent += `Средняя стоимость работы: ${(totalCost / totalWorks).toFixed(2)} руб.\n\n`;
+                reportContent += `Отчет сформирован системой управления техобслуживанием\n`;
+                
+                const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `report-${window.currentReportData.period_start}-${window.currentReportData.period_end}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showMessage('Отчет успешно скачан!', 'success');
+                
+            } catch (error) {
+                showMessage('Ошибка скачивания отчета', 'error');
+            }
+        }
+
+        async function loadSavedReports() {
+            const container = document.getElementById('savedReportsList');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/reports`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p>Нет сохраненных отчетов</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Название</th>
+                            <th>Тип</th>
+                            <th>Период</th>
+                            <th>Дата создания</th>
+                            <th>Действия</th>
+                        </tr>
+                `;
+                
+                data.forEach(report => {
+                    html += `
+                        <tr>
+                            <td>${report.name}</td>
+                            <td>${report.type}</td>
+                            <td>${report.period_start} - ${report.period_end}</td>
+                            <td>${formatDateTime(report.created_date)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="downloadSavedReport(${report.id})">📥 Скачать</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки сохраненных отчетов</div>';
+            }
+        }
+
+        async function downloadSavedReport(reportId) {
+            try {
+                window.open(`${API_BASE}/reports/${reportId}/download`, '_blank');
+                showMessage('Отчет скачивается...', 'success');
+            } catch (error) {
+                showMessage('Ошибка скачивания отчета', 'error');
+            }
+        }
+
+        async function loadWorkPlan() {
+            const container = document.getElementById('workPlan');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/work-plan`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p>Нет запланированных работ на ближайшие 7 дней</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Оборудование</th>
+                            <th>Клиент</th>
+                            <th>Дата</th>
+                            <th>Тип</th>
+                            <th>Техник</th>
+                            <th>Статус</th>
+                            <th>Время</th>
+                        </tr>
+                `;
+                
+                data.forEach(work => {
+                    const statusClass = `status-${work.status.replace('_', '-')}`;
+                    const timeInfo = work.actual_hours ? 
+                        `${work.actual_hours}ч (факт)` : 
+                        `${work.duration_hours}ч (план)`;
+                    
+                    html += `
+                        <tr>
+                            <td>${work.equipment_name} (${work.model})</td>
+                            <td>${work.client_name}</td>
+                            <td>${work.maintenance_date}</td>
+                            <td>${work.type}</td>
+                            <td>${work.technician || '-'}</td>
+                            <td><span class="status-badge ${statusClass}">${getStatusText(work.status)}</span></td>
+                            <td>${timeInfo}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки плана работ</div>';
+            }
+        }
+
+        async function loadLowStockParts() {
+            const container = document.getElementById('lowStockPartsList');
+            container.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/low-stock-parts`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p>Все запчасти в наличии</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table>
+                        <tr>
+                            <th>Название</th>
+                            <th>Артикул</th>
+                            <th>Текущее количество</th>
+                            <th>Минимальное</th>
+                            <th>Нужно заказать</th>
+                            <th>Цена</th>
+                            <th>Поставщик</th>
+                        </tr>
+                `;
+                
+                data.forEach(part => {
+                    html += `
+                        <tr>
+                            <td>${part.name}</td>
+                            <td>${part.part_number}</td>
+                            <td>${part.quantity}</td>
+                            <td>${part.min_quantity}</td>
+                            <td><strong style="color: var(--warning);">${part.need_to_order}</strong></td>
+                            <td>${part.price} руб.</td>
+                            <td>${part.supplier}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Ошибка загрузки данных о запчастях</div>';
+            }
+        }
+
+        async function deleteClient(id) {
+            if (!confirm('Вы уверены, что хотите удалить этого клиента?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/clients/${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                showMessage(result.message, 'success');
+                loadClients();
+            } catch (error) {
+                showMessage('Ошибка удаления клиента', 'error');
+            }
+        }
+
+        async function deleteEquipment(id) {
+            if (!confirm('Вы уверены, что хотите удалить это оборудование?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/equipment/${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                showMessage(result.message, 'success');
+                loadEquipment();
+            } catch (error) {
+                showMessage('Ошибка удаления оборудования', 'error');
+            }
+        }
+
+        async function deleteMaintenance(id) {
+            if (!confirm('Вы уверены, что хотите удалить эту работу?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/maintenance/${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                showMessage(result.message, 'success');
+                loadMaintenance();
+            } catch (error) {
+                showMessage('Ошибка удаления работы', 'error');
+            }
+        }
+
+        async function deletePart(id) {
+            if (!confirm('Вы уверены, что хотите удалить эту запчасть?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/parts/${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                showMessage(result.message, 'success');
+                loadParts();
+            } catch (error) {
+                showMessage('Ошибка удаления запчасти', 'error');
+            }
+        }
+
+        async function deleteRequest(id) {
+            if (!confirm('Вы уверены, что хотите удалить эту заявку?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/service-requests/${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                showMessage(result.message, 'success');
+                loadServiceRequests();
+            } catch (error) {
+                showMessage('Ошибка удаления заявки', 'error');
+            }
+        }
+
+        document.getElementById('clientForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const url = data.id ? `${API_BASE}/clients/${data.id}` : `${API_BASE}/clients`;
+                const method = data.id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                showMessage(result.message, 'success');
+                closeModal('clientModal');
+                loadClients();
+            } catch (error) {
+                showMessage('Ошибка сохранения клиента', 'error');
+            }
+        });
+
+        document.getElementById('equipmentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const url = data.id ? `${API_BASE}/equipment/${data.id}` : `${API_BASE}/equipment`;
+                const method = data.id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                showMessage(result.message, 'success');
+                closeModal('equipmentModal');
+                loadEquipment();
+            } catch (error) {
+                showMessage('Ошибка сохранения оборудования', 'error');
+            }
+        });
+
+        document.getElementById('maintenanceForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const url = data.id ? `${API_BASE}/maintenance/${data.id}` : `${API_BASE}/maintenance`;
+                const method = data.id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                showMessage(result.message, 'success');
+                closeModal('maintenanceModal');
+                loadMaintenance();
+            } catch (error) {
+                showMessage('Ошибка сохранения работы', 'error');
+            }
+        });
+
+        document.getElementById('partForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const url = data.id ? `${API_BASE}/parts/${data.id}` : `${API_BASE}/parts`;
+                const method = data.id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                showMessage(result.message, 'success');
+                closeModal('partModal');
+                loadParts();
+            } catch (error) {
+                showMessage('Ошибка сохранения запчасти', 'error');
+            }
+        });
+
+        document.getElementById('newRequestForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const response = await fetch(`${API_BASE}/service-requests`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                showMessage(result.message, 'success');
+                closeModal('newRequestModal');
+                loadServiceRequests();
+            } catch (error) {
+                showMessage('Ошибка создания заявки', 'error');
+            }
+        });
+
+        function getStatusText(status) {
+            const statusMap = {
+                'planned': 'Запланировано',
+                'in_progress': 'В работе',
+                'completed': 'Завершено'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getRequestStatusText(status) {
+            const statusMap = {
+                'новая': 'Новая',
+                'в работе': 'В работе',
+                'решена': 'Решена'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getDifficultyText(difficulty) {
+            const difficultyMap = {
+                'low': 'Низкая',
+                'medium': 'Средняя',
+                'high': 'Высокая'
+            };
+            return difficultyMap[difficulty] || difficulty;
+        }
+
+        function formatDateTime(dateTime) {
+            if (!dateTime) return '-';
+            const date = new Date(dateTime);
+            return date.toLocaleString('ru-RU');
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            messageDiv.style.position = 'fixed';
+            messageDiv.style.top = '20px';
+            messageDiv.style.right = '20px';
+            messageDiv.style.zIndex = '1000';
+            messageDiv.style.minWidth = '300px';
+            messageDiv.style.padding = '15px 20px';
+            messageDiv.style.borderRadius = '8px';
+            messageDiv.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+            
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardStats();
+            loadWorkPlan();
+            loadLowStockParts();
+        });
+
+async function assignTechnician(requestId) {
+    const technician = prompt('Введите имя техника:');
+    if (!technician) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/service-requests/${requestId}/assign`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ technician })
+        });
+        
+        const result = await response.json();
+        showMessage(result.message, 'success');
+        loadServiceRequests();
+    } catch (error) {
+        showMessage('Ошибка назначения техника', 'error');
+    }
+}
+
+async function addSolution(requestId) {
+    const solution = prompt('Введите описание решения:');
+    if (!solution) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/service-requests/${requestId}/solution`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ solution_description: solution })
+        });
+        
+        const result = await response.json();
+        showMessage(result.message, 'success');
+        loadServiceRequests();
+    } catch (error) {
+        showMessage('Ошибка добавления решения', 'error');
+    }
+}
+
+function viewSolution(requestId) {
+    alert('Функция просмотра решения будет реализована в следующей версии');
+}
+    </script>
+</body>
+</html>
